@@ -1,0 +1,59 @@
+from flask import Flask, request, session, redirect
+import sqlite3
+import os
+
+app = Flask(__name__)
+app.secret_key = 'ultra_secret'
+
+DB_PATH = os.path.join(os.path.dirname(__file__), 'users.db')
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        login = request.form['login']
+        password = request.form['password']
+        conn = sqlite3.connect(DB_PATH)
+        conn.execute(f"INSERT INTO users (login, password) VALUES ('{login}', '{password}')")
+        conn.commit()
+        conn.close()
+        return redirect('/login')
+    return '''
+        <form method="post">
+            Login: <input name="login"><br>
+            Password: <input name="password" type="password"><br>
+            <input type="submit" value="Register">
+        </form>
+    '''
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        login = request.form['login']
+        password = request.form['password']
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.execute(f"SELECT * FROM users WHERE login='{login}' AND password='{password}'")
+        user = cursor.fetchone()
+        conn.close()
+        if user:
+            session['user'] = login
+            return redirect('/hello')
+        return "Login failed"
+    return '''
+        <form method="post">
+            Login: <input name="login"><br>
+            Password: <input name="password" type="password"><br>
+            <input type="submit" value="Login">
+        </form>
+    '''
+
+@app.route('/hello')
+def hello():
+    if 'user' not in session:
+        return redirect('/login')
+    return f'Привет, {session["user"]}'
+
+if name == '__main__':
+    conn = sqlite3.connect(DB_PATH)
+    conn.execute("CREATE TABLE IF NOT EXISTS users (login TEXT, password TEXT)")
+    conn.close()
+    app.run(host='0.0.0.0', port=5000)
